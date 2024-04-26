@@ -1,0 +1,225 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 
+ - AWS::LanguageExtensions
+ - AWS::Serverless-2016-10-31
+Description: >
+  oidc-authorizer-benchmark
+
+  Provision the necessary infrastructure to benchmark oidc-authorizer (https://github.com/lmammino/oidc-authorizer)
+
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+    LoggingConfig:
+      LogFormat: JSON
+
+Resources:
+  # ----------------
+  # generic API Gateway logging. TO BE REMOVED
+  # ----------------
+  CloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Action: 'sts:AssumeRole'
+          Effect: Allow
+          Principal:
+            Service: apigateway.amazonaws.com
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+
+  ApiCWLRoleArn:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt CloudWatchRole.Arn
+
+
+  # -----------------------------------------------------
+  # KEYS API GATEWAY
+  # Simulates an OIDC provider with its own keys endpoint
+  # -----------------------------------------------------
+  JWKSApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    DependsOn: ApiCWLRoleArn
+    Properties:
+      Description: JWKSApiGateway for oidc-authorizer-benchmark
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Name: JWKSApiGateway
+
+  JWKSApiGatewayResourceKeys:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt JWKSApiGateway.RootResourceId
+      PathPart: "keys"
+      RestApiId: !Ref JWKSApiGateway
+
+  JWKSApiGatewayResourceKeysMethodGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        IntegrationResponses:
+          - ResponseTemplates:
+              # copy pasted from 'keys/jwks.json' with `node -e 'j = require(\'./keys/jwks.json\');console.log(JSON.stringify(JSON.stringify(j)))'`
+              # YES! I also wish there was an _easy_ way to include a file in a CFN template! :-/
+              application/json: "{\"keys\":[{\"kty\":\"RSA\",\"e\":\"AQAB\",\"use\":\"sig\",\"kid\":\"key0\",\"alg\":\"RS512\",\"n\":\"snkUbgx-b74u-ARnvFashvlkB0JZBeyVLat-R5YS1eLZTUF8qPBOJJJwKj0aw-o21D3GY-Dw0S67klCWWbnbDzmO9JrqCIC6PX_T3v9wOHyeKO-GLnNoM6xSu_WbXkBWSIJXd1BJL6lw7Boukpxu54ILz97xUMiqyEbLiuhaF0e5ZTLx42tJ2ps6ZjkBEVyIevj41A1oGfBOWorR3ueU7hVAQzUk9JMU129B8YbLjLQ2xtAVUd0WTLGpbaZj7QRsuBe2LAxLmGbXj-tRYwpLw6XBZ67c2iHW8TnEGjPlGzqMMfL7mb4E4ZdNR4frfw_KYcf52uStCSHpKG7Zc0nEoQ\"},{\"kty\":\"RSA\",\"e\":\"AQAB\",\"use\":\"sig\",\"kid\":\"key1\",\"alg\":\"RS512\",\"n\":\"njU28ahMnS0brWz_ILDkUJZIWfv4dURkxBQ5_GvxlnHjFpndowAAwVsjN7aQHv_0DBrvj3rgbh7PurYrHgOf-Uiaqk5gIUG1b79Mxq7OXhR4_GdBtKrhLNUe3V2udO0GGIjWLl4_END6fdkLhOXOJOnJYJassCAv76Fh75uUcrgUoGf1BqF4JQr7wGu_Tku8DyNRXlB2Wz4UXtbzkpIRiamFj7JypsKM5Ou4FhswStH9AVfqV-Pb1eLtzk_yWsDPD5YC32a3EvEYdoP3RyeIA0cRzmD6CoGns_uq3YZxYdw4_sbrCmdaQazQeFEYO-cLgh84yoC6D69rV8Olo5AXhQ\"},{\"kty\":\"RSA\",\"e\":\"AQAB\",\"use\":\"sig\",\"kid\":\"key2\",\"alg\":\"RS512\",\"n\":\"u3TvlNq4vCxfmEDu4i_pV4qtdOuk3QD0vaDPrLiY7CDJBGFyHnRFuNFMVDirbKEBXXN3TgXxwUUV18QKyjGI2ryEVj_uFJJxEc42_XtIu4gLTtOUQnw2RJ_d6DGkbp3QBNYmAHabxCdbScCSeXqCuxufDhVcR0RsroiASYabXerYrfyDT29TZdH3_Qm0yHNjGxIxawJMnaTYtDSYzQDibML3BH1HJbBhRM5kzodEVedWVx3-m8NUkGpQ4Gkm59FzRGNJon8trz-iUJtbotjrdVmjAPWcOCD9pWDq_Mn388CWBxW000zwg9gLeb0rbXowaLCl76eqWQWmAE6AixmThw\"},{\"kty\":\"RSA\",\"e\":\"AQAB\",\"use\":\"sig\",\"kid\":\"key3\",\"alg\":\"RS512\",\"n\":\"sqlmcPkR_YDrXQY6DAbDbSAlh8NJcN41X_eAzjr_4PwvonJc5kAvZfrHLRrg0a6AGFt4s1I7D3kOnn6WO2ooKejYlVG5u-w3Z0VqOh0I1-4FnGx8QBjrmHQaBsUQiRmdRWNrsKs-Cbo92LS6jlQkpkTaANZL1QOgOz48X1muqEuv4XD7LFAdSkU6v4r5V1n2veBZeSi_uvvKxNM_q6bVLXhljgInBZMqMOIWXRJY5jrbuXGHWMcSqlHoHLOGV_cLgom4IHb1FtAYPA-cwSxb-W-VksoJ1d5Ik7ttIAVyfcTIO5GDQvK5VmmCQoZM1MaxbU0F7F_T3SQRb4e67z--WQ\"}]}"
+            StatusCode: "200"
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - ResponseModels:
+            application/json: Empty
+          StatusCode: "200"
+      ResourceId: !Ref JWKSApiGatewayResourceKeys
+      RestApiId: !Ref JWKSApiGateway
+
+  JWKSApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: 
+      - JWKSApiGatewayResourceKeysMethodGet
+      - JWKSApiGatewayResourceKeys
+    Properties:
+      Description: JWKS keys API Deployment
+      RestApiId: !Ref JWKSApiGateway
+
+  JWKSApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref JWKSApiGatewayDeployment
+      Description: JWKS keys API Deployment Prod
+      RestApiId: !Ref JWKSApiGateway
+      StageName: 'Prod'
+
+
+  # -----------------------------------------------------
+  # oidc-authorizer protected API Gateway
+  # -----------------------------------------------------
+  # The oidc-authorizer imported from SAR
+  oidcauthorizer:
+    Type: AWS::Serverless::Application
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:eu-west-1:795006566846:applications/oidc-authorizer
+        SemanticVersion: 0.0.11
+      Parameters:
+        AcceptedAlgorithms: "RS512"
+        AcceptedAudiences: "oidc-authorizer-benchmark"
+        AcceptedIssuers: "oidc-authorizer-benchmark"
+        DefaultPrincipalId: "unknown"
+        JwksUri: !Sub "https://${JWKSApiGateway}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${JWKSApiGatewayStage}/keys"
+        MinRefreshRate: "900"
+        PrincipalIdClaims: "preferred_username, sub"
+        LambdaMemorySize: "256"
+        LambdaTimeout: "3"
+        StackPrefix: "OidcAuthorizerBenchmark"
+
+  OidcAuthorizerProtectedApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: An API protected by the oidc-authorizer (for oidc-authorizer-benchmark)
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Name: OidcAuthorizerProtectedApi
+
+  OidcAuthorizerProtectedApiAuth:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      RestApiId: !Ref OidcAuthorizerProtectedApi
+      Name: OidcAuthorizer
+      Type: TOKEN
+      IdentitySource: method.request.header.Authorization
+      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${oidcauthorizer.Outputs.OidcAuthorizerArn}/invocations"
+
+  OidcAuthorizerProtectedApiAuthPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt oidcauthorizer.Outputs.OidcAuthorizerArn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${OidcAuthorizerProtectedApi}/authorizers/${OidcAuthorizerProtectedApiAuth}"
+
+  OidcAuthorizerProtectedApiEndpoint:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt OidcAuthorizerProtectedApi.RootResourceId
+      PathPart: "hello"
+      RestApiId: !Ref OidcAuthorizerProtectedApi
+
+  OidcAuthorizerProtectedApiEndpointMethodGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref OidcAuthorizerProtectedApiAuth
+      ApiKeyRequired: true
+      HttpMethod: GET
+      Integration:
+        IntegrationResponses:
+          - ResponseTemplates:
+              application/json: "{\"hello\":\"world\"}"
+            StatusCode: "200"
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - ResponseModels:
+            application/json: Empty
+          StatusCode: "200"
+      ResourceId: !Ref OidcAuthorizerProtectedApiEndpoint
+      RestApiId: !Ref OidcAuthorizerProtectedApi
+
+  OidcAuthorizerProtectedApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: 
+      - OidcAuthorizerProtectedApiEndpointMethodGet
+      - OidcAuthorizerProtectedApiEndpoint
+    Properties:
+      Description: JWKS keys API Deployment
+      RestApiId: !Ref OidcAuthorizerProtectedApi
+
+  OidcAuthorizerProtectedApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref OidcAuthorizerProtectedApiDeployment
+      Description: JWKS keys API Deployment Prod
+      RestApiId: !Ref OidcAuthorizerProtectedApi
+      StageName: 'Prod'
+
+
+  # HelloWorldFunction:
+  #   Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  #   Metadata:
+  #     BuildMethod: rust-cargolambda # More info about Cargo Lambda: https://github.com/cargo-lambda/cargo-lambda
+  #   Properties:
+  #     CodeUri: ./rust_app   # Points to dir of Cargo.toml
+  #     Handler: bootstrap    # Do not change, as this is the default executable name produced by Cargo Lambda
+  #     Runtime: provided.al2023
+  #     Architectures:
+  #     - x86_64
+  #     Events:
+  #       HelloWorld:
+  #         Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+  #         Properties:
+  #           Path: /hello
+  #           Method: get
+
+Outputs:
+  JWKSEndpoint:
+    Description: URL of API Gateway endpoint serving the public keys in JWKS format
+    Value: !Sub "https://${JWKSApiGateway}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${JWKSApiGatewayStage}/keys"
+
+  OidcAuthorizerProtectedApiEndpoint:
+    Description: URL of API Gateway endpoint protected by the oidc-authorizer
+    Value: !Sub "https://${OidcAuthorizerProtectedApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${OidcAuthorizerProtectedApiStage}/hello"
