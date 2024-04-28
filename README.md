@@ -21,6 +21,36 @@ filter @type = "REPORT"
 by bin(30m)
 ```
 
+<details>
+
+<summary>
+
+
+#### Initial results
+
+</summary>
+
+**CloudWatch Logs Insights**    
+region: eu-west-1    
+log-group-names: /aws/lambda/oidc-authorizer-benchmark-oidcautho-OidcAuthorizer-WCH68cPWb0DB    
+start-time: -1800s    
+end-time: 0s    
+query-string:
+  ```
+  filter @type = "REPORT"
+| stats
+  avg(@billedDuration) as Average,
+  percentile(@billedDuration, 99) as NinetyNinth,
+  percentile(@billedDuration, 95) as NinetyFifth,
+  percentile(@billedDuration, 90) as Ninetieth
+by bin(30m)
+  ```
+---
+| bin(30m) | Average | NinetyNinth | NinetyFifth | Ninetieth |
+| --- | --- | --- | --- | --- |
+| 2024-04-28 16:00:00.000 | 4.7965 | 91 | 11 | 8 |
+---
+
 ### Cold Start Percentage and Average Duration
 
 ```plain
@@ -34,6 +64,8 @@ filter @type = "REPORT"
   count(*) as totalRequests
 by bin(30m)
 ```
+
+</details>
 
 ### Execution cost
 
