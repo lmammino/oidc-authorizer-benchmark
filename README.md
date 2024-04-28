@@ -106,7 +106,8 @@ by bin(30m)
 
 ### Execution cost
 
-`eu-west-1` pricing:
+[`eu-west-1` pricing](https://aws.amazon.com/lambda/pricing/):
+
   - **128MB**: `$0.0000000017`
   - **256MB**: `$0.0000000042` (estimated)
   - **512MB**: `$0.0000000067`
