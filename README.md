@@ -51,6 +51,10 @@ by bin(30m)
 | 2024-04-28 16:00:00.000 | 4.7965 | 91 | 11 | 8 |
 ---
 
+</details>
+
+
+
 ### Cold Start Percentage and Average Duration
 
 ```plain
@@ -65,7 +69,40 @@ filter @type = "REPORT"
 by bin(30m)
 ```
 
+<details>
+
+<summary>
+
+#### Initial results
+
+</summary>
+
+**CloudWatch Logs Insights**    
+region: eu-west-1    
+log-group-names: /aws/lambda/oidc-authorizer-benchmark-oidcautho-OidcAuthorizer-WCH68cPWb0DB    
+start-time: -1800s    
+end-time: 0s    
+query-string:
+  ```
+  filter @type = "REPORT"
+| stats sum(strcontains(@message, "Init Duration"))/count(*) * 100 as coldStartPct, 
+  avg(@duration) as AvgDuration,
+  percentile(@duration, 99) as NinetyNinth,
+  percentile(@duration, 95) as NinetyFifth,
+  percentile(@duration, 90) as Ninetieth,
+  sum(strcontains(@message, "Init Duration")) as numColdStart, 
+  count(*) as totalRequests
+by bin(30m)
+  ```
+---
+| bin(30m) | coldStartPct | AvgDuration | NinetyNinth | NinetyFifth | Ninetieth | numColdStart | totalRequests |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2024-04-28 16:00:00.000 | 1.93 | 3.3531 | 51.2436 | 10.4778 | 6.9348 | 193 | 10000 |
+---
+
 </details>
+
+
 
 ### Execution cost
 
@@ -83,3 +120,34 @@ filter @type = "REPORT"
   (TotalExecutionMs * 0.0000000042) as TotalCostUSD
 by bin(30m)
 ```
+
+<details>
+
+<summary>
+
+#### Initial results
+
+</summary>
+
+**CloudWatch Logs Insights**    
+region: eu-west-1    
+log-group-names: /aws/lambda/oidc-authorizer-benchmark-oidcautho-OidcAuthorizer-WCH68cPWb0DB    
+start-time: -1800s    
+end-time: 0s    
+query-string:
+  ```
+  filter @type = "REPORT"
+| stats
+  sum(@billedDuration) as TotalExecutionMs,
+  avg(@memorySize) as MemorySize,
+  avg(@maxMemoryUsed) as AvgMaxMemoryUsed,
+  (TotalExecutionMs * 0.0000000042) as TotalCostUSD
+by bin(30m)
+  ```
+---
+| bin(30m) | TotalExecutionMs | MemorySize | AvgMaxMemoryUsed | TotalCostUSD |
+| --- | --- | --- | --- | --- |
+| 2024-04-28 16:00:00.000 | 47965 | 256000000 | 21886900 | 0.0002015 |
+---
+
+</details>
