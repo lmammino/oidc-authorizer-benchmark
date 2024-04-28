@@ -111,7 +111,7 @@ Resources:
     Properties:
       Location:
         ApplicationId: arn:aws:serverlessrepo:eu-west-1:795006566846:applications/oidc-authorizer
-        SemanticVersion: 0.0.11
+        SemanticVersion: 0.1.0
       Parameters:
         AcceptedAlgorithms: "RS512"
         AcceptedAudiences: "oidc-authorizer-benchmark"
@@ -123,6 +123,7 @@ Resources:
         LambdaMemorySize: "256"
         LambdaTimeout: "3"
         StackPrefix: "OidcAuthorizerBenchmark"
+        AwsLambdaLogLevel: "INFO"
 
   OidcAuthorizerProtectedApi:
     Type: AWS::ApiGateway::RestApi
@@ -162,7 +163,7 @@ Resources:
     Properties:
       AuthorizationType: CUSTOM
       AuthorizerId: !Ref OidcAuthorizerProtectedApiAuth
-      ApiKeyRequired: true
+      ApiKeyRequired: false
       HttpMethod: GET
       Integration:
         IntegrationResponses:
