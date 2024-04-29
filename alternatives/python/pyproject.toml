@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "oidc-authorizer"
+version = "0.0.1"
+description = "AWS API Python Starter"
+authors = ["Luciano Mammino"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3.10",
+]
+repository = "https://github.com/lmammino/oidc-authorizer-benchmark"
+readme = "README.md"
+keywords = ["serverless", "aws", "api"]
+packages = [{ include = "**/*", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12.0"
+requests = "^2.31.0"
+pyjwt = "^2.8.0"
+cryptography = "^41.0.4"
+aws-lambda-powertools = "^2.37.0"
+
+[tool.poetry.group.dev.dependencies]
