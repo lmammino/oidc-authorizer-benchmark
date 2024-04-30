@@ -199,22 +199,106 @@ Resources:
       StageName: 'Prod'
 
 
-  # HelloWorldFunction:
-  #   Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-  #   Metadata:
-  #     BuildMethod: rust-cargolambda # More info about Cargo Lambda: https://github.com/cargo-lambda/cargo-lambda
-  #   Properties:
-  #     CodeUri: ./rust_app   # Points to dir of Cargo.toml
-  #     Handler: bootstrap    # Do not change, as this is the default executable name produced by Cargo Lambda
-  #     Runtime: provided.al2023
-  #     Architectures:
-  #     - x86_64
-  #     Events:
-  #       HelloWorld:
-  #         Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-  #         Properties:
-  #           Path: /hello
-  #           Method: get
+  # ----------------
+  # Python Benchmark
+  # ----------------
+  PythonOidcAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: alternatives/python
+      Handler: handler.handler
+      Runtime: python3.12
+      Timeout: 10
+      MemorySize: 256
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          JWKS_URI: !Sub "https://${JWKSApiGateway}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${JWKSApiGatewayStage}/keys"
+          MIN_REFRESH_RATE: "900"
+          PRINCIPAL_ID_CLAIMS: "preferred_username, sub"
+          DEFAULT_PRINCIPAL_ID: "unknown"
+          ACCEPTED_ISSUER: "oidc-authorizer-benchmark"
+          ACCEPTED_AUDIENCES: "oidc-authorizer-benchmark"
+          POWERTOOLS_SERVICE_NAME: PythonOidcAuthorizer
+          POWERTOOLS_METRICS_NAMESPACE: PythonOidcAuthorizer
+          LOG_LEVEL: INFO
+      Tags:
+        LambdaPowertools: python
+
+
+  PythonOidcAuthorizerProtectedApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: An API protected by the python equivalent of oidc-authorizer (for oidc-authorizer-benchmark)
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Name: PythonOidcAuthorizerProtectedApi
+
+  PythonOidcAuthorizerProtectedApiAuth:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      RestApiId: !Ref PythonOidcAuthorizerProtectedApi
+      Name: PythonOidcAuthorizer
+      Type: TOKEN
+      IdentitySource: method.request.header.Authorization
+      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonOidcAuthorizer.Arn}/invocations"
+
+  PythonOidcAuthorizerProtectedApiAuthPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt PythonOidcAuthorizer.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PythonOidcAuthorizerProtectedApi}/authorizers/${PythonOidcAuthorizerProtectedApiAuth}"
+
+  PythonOidcAuthorizerProtectedApiEndpoint:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt PythonOidcAuthorizerProtectedApi.RootResourceId
+      PathPart: "hello"
+      RestApiId: !Ref PythonOidcAuthorizerProtectedApi
+
+  PythonOidcAuthorizerProtectedApiEndpointMethodGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref PythonOidcAuthorizerProtectedApiAuth
+      ApiKeyRequired: false
+      HttpMethod: GET
+      Integration:
+        IntegrationResponses:
+          - ResponseTemplates:
+              application/json: "{\"hello\":\"world\"}"
+            StatusCode: "200"
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - ResponseModels:
+            application/json: Empty
+          StatusCode: "200"
+      ResourceId: !Ref PythonOidcAuthorizerProtectedApiEndpoint
+      RestApiId: !Ref PythonOidcAuthorizerProtectedApi
+
+  PythonOidcAuthorizerProtectedApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: 
+      - PythonOidcAuthorizerProtectedApiEndpointMethodGet
+      - PythonOidcAuthorizerProtectedApiEndpoint
+    Properties:
+      Description: JWKS keys API Deployment
+      RestApiId: !Ref PythonOidcAuthorizerProtectedApi
+
+  PythonOidcAuthorizerProtectedApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref PythonOidcAuthorizerProtectedApiDeployment
+      Description: JWKS keys API Deployment Prod
+      RestApiId: !Ref PythonOidcAuthorizerProtectedApi
+      StageName: 'Prod'
 
 Outputs:
   JWKSEndpoint:
@@ -224,3 +308,7 @@ Outputs:
   OidcAuthorizerProtectedApiEndpoint:
     Description: URL of API Gateway endpoint protected by the oidc-authorizer
     Value: !Sub "https://${OidcAuthorizerProtectedApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${OidcAuthorizerProtectedApiStage}/hello"
+
+  PythonOidcAuthorizerProtectedApiEndpoint:
+    Description: URL of API Gateway endpoint protected by the Python version of oidc-authorizer
+    Value: !Sub "https://${PythonOidcAuthorizerProtectedApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${PythonOidcAuthorizerProtectedApiStage}/hello"

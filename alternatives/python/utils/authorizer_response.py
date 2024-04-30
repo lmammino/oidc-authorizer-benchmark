@@ -6,8 +6,8 @@ def allow(principal_id: str, token_claims: Dict[str, Any]) -> Dict[str, Any]:
     "context": {
       "claims": json.dumps(token_claims),
     },
-    "principal_id": principal_id,
-    "policy_document": {
+    "principalId": principal_id,
+    "policyDocument": {
       "Version": "2012-10-17",
       "Statement": [
         {
@@ -21,7 +21,7 @@ def allow(principal_id: str, token_claims: Dict[str, Any]) -> Dict[str, Any]:
 
 def deny(resource: str) -> Dict[str, Any]:
   return {
-    "policy_document": {
+    "policyDocument": {
       "Version": "2012-10-17",
       "Statement": [
         {
