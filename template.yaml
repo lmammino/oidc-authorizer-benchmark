@@ -7,13 +7,6 @@ Description: >
 
   Provision the necessary infrastructure to benchmark oidc-authorizer (https://github.com/lmammino/oidc-authorizer)
 
-Globals:
-  Function:
-    Timeout: 3
-    MemorySize: 128
-    LoggingConfig:
-      LogFormat: JSON
-
 Resources:
   # ----------------
   # generic API Gateway logging. TO BE REMOVED
