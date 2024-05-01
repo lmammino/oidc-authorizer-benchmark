@@ -148,9 +148,16 @@ The results are also available as a CSV in [`docs/logs-insights-results-2024-05-
 </details>
 
 
-## Summary of the latest benchmark
+## Summary of the latest benchmark execution
 
-TODO
+Based on the numbers from my latest benchmark execution, these are some relevant findings when comparing `oidc-authorizer` with an equivalent Python implementation:
+
+- The Rust version is about 16 times faster than the Python version when it comes to cold starts (~42ms vs ~670ms).
+- Execution times are quite comparable between the two implementations, with the Rust version being only slightly faster. This is probably because the Python library used to do the JWT validation is quite optimized.
+- Memory utilization is about 3.5 times smaller in Rust (22MB vs 77MB). This allows us to use a smaller memory size for the Rust version, which results in a lower cost.
+- The cost per request is about 3 times smaller in Rust compared to Python (~1.44 USD vs ~4.13 USD per every 100Mln invocations).
+
+It's worth noting that this kind of test has a very low cold start ratio (~1%) and the performance of the two implementations is quite comparable (except cost). In cases with a higher cold start ratio, the Rust version is expected to have a larger advantage in terms of performance and overall user experience.
 
 
 ## 🙌 Contributing
