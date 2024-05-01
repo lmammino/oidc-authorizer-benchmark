@@ -8,37 +8,16 @@ Description: >
   Provision the necessary infrastructure to benchmark oidc-authorizer (https://github.com/lmammino/oidc-authorizer)
 
 Resources:
-  # ----------------
-  # generic API Gateway logging. TO BE REMOVED
-  # ----------------
-  CloudWatchRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          Action: 'sts:AssumeRole'
-          Effect: Allow
-          Principal:
-            Service: apigateway.amazonaws.com
-      Path: /
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
-
-  ApiCWLRoleArn:
-    Type: AWS::ApiGateway::Account
-    Properties:
-      CloudWatchRoleArn: !GetAtt CloudWatchRole.Arn
-
   # -----------------------------------------------------
   # LAMBDA POWER TUNING
+  # Enable if needed
   # -----------------------------------------------------
-  PowerTuningApp:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location:
-        ApplicationId: arn:aws:serverlessrepo:us-east-1:451282441545:applications/aws-lambda-power-tuning
-        SemanticVersion: 4.3.4
+  # PowerTuningApp:
+  #   Type: AWS::Serverless::Application
+  #   Properties:
+  #     Location:
+  #       ApplicationId: arn:aws:serverlessrepo:us-east-1:451282441545:applications/aws-lambda-power-tuning
+  #       SemanticVersion: 4.3.4
 
 
   # -----------------------------------------------------
@@ -47,7 +26,6 @@ Resources:
   # -----------------------------------------------------
   JWKSApiGateway:
     Type: AWS::ApiGateway::RestApi
-    DependsOn: ApiCWLRoleArn
     Properties:
       Description: JWKSApiGateway for oidc-authorizer-benchmark
       EndpointConfiguration:
@@ -123,7 +101,7 @@ Resources:
         JwksUri: !Sub "https://${JWKSApiGateway}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${JWKSApiGatewayStage}/keys"
         MinRefreshRate: "900"
         PrincipalIdClaims: "preferred_username, sub"
-        LambdaMemorySize: "256"
+        LambdaMemorySize: "128"
         LambdaTimeout: "3"
         StackPrefix: "OidcAuthorizerBenchmark"
         AwsLambdaLogLevel: "INFO"

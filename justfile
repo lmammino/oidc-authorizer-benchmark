@@ -1,23 +1,30 @@
 validate-stack:
     sam validate --lint
 
-deploy-stack: validate-stack
+build-stack:
+    sam build
+
+deploy-stack: validate-stack build-stack
     sam deploy --no-confirm-changeset
     
 stack-output:
-    sam list stack-outputs --output json 
+    sam list stack-outputs --output json
 
-oidc-api-endpoint:
+destroy-stack:
+    sam delete --no-prompts
+
+get-oidc-api-endpoint:
     sam list stack-outputs --output json | jq -r '.[] | select(.OutputKey == "OidcAuthorizerProtectedApiEndpoint") | .OutputValue'
 
-python-oidc-api-endpoint:
+get-python-oidc-api-endpoint:
     sam list stack-outputs --output json | jq -r '.[] | select(.OutputKey == "PythonOidcAuthorizerProtectedApiEndpoint") | .OutputValue'
 
-build-generate-targets:
-    cargo build -p generate-targets --release
+build-send-requests:
+    cargo build -p send-requests --release
 
-run: build-generate-targets
-    cargo run -p generate-targets --release -- --target-url $(just oidc-api-endpoint) --iterations 10000 | vegeta attack -lazy -rate=100/s -duration=100s | vegeta encode
+run: build-send-requests
+    cargo run -p send-requests --release -- --target-url $(just get-oidc-api-endpoint)
 
-run-python: build-generate-targets
-    cargo run -p generate-targets --release -- --target-url $(just python-oidc-api-endpoint) --iterations 10000 | vegeta attack -lazy -rate=100/s -duration=100s | vegeta encode
+run-python: build-send-requests
+    cargo run -p send-requests --release -- --target-url $(just get-python-oidc-api-endpoint)
+

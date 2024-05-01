@@ -1,5 +1,5 @@
 [package]
-name = "generate-targets"
+name = "send-requests"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,5 +10,10 @@ chrono = "0.4.38"
 clap = { version = "4.5.4", features = ["derive"] }
 jsonwebtoken = "9.3.0"
 rand = "0.8.5"
+reqwest = { version = "0.12.4", default-features = false, features = [
+  "rustls-tls",
+  "http2",
+] }
 serde = "1.0.199"
 serde_json = "1.0.116"
+tokio = { version = "1.37.0", features = ["full"] }
