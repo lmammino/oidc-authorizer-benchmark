@@ -53,7 +53,7 @@ just run # runs the Rust version
 and
 
 ```bash
-run-python # runs the Python version
+just run-python # runs the Python version
 ```
 
 ### 3. Generate the report
